@@ -553,7 +553,7 @@ async def alignment_answer(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.message.answer("Главное меню:", reply_markup=main_menu(employee["name"]))
         return
 
-    await set_alignment(data["check_id"], True)
+    await set_alignment(data["check_id"], False)
     await state.set_state(Flow.waiting_alignment_photo)
     await callback.message.edit_text(
         progress_header(
