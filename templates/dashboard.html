@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173b31">
+  <title>Материальный бухгалтер</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    :root{
+      --bg:#f4f1ea;--surface:#fff;--green:#1f5d49;--dark:#173b31;
+      --gold:#c9a35b;--text:#202823;--muted:#748079;--line:#e8e7e1;
+      --red:#b42318;--red-bg:#fff0ee;--ok:#176344;--ok-bg:#e8f6ef;
+    }
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}
+    header{background:linear-gradient(135deg,var(--dark),var(--green));color:#fff;padding:26px max(20px,calc((100vw - 1320px)/2))}
+    .header-row{display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap}
+    h1{margin:0 0 6px;font-size:clamp(26px,4vw,39px)}.lead{opacity:.75}
+    .logout{color:#fff;text-decoration:none;border:1px solid #ffffff48;padding:10px 14px;border-radius:12px}
+    main{max-width:1320px;margin:auto;padding:22px}
+    .toolbar,.panel,.card{background:#fff;border-radius:18px;box-shadow:0 8px 26px #1c2d260e}
+    .toolbar{margin-top:-42px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:relative}
+    .toolbar form{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+    input,textarea{padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit}
+    button{background:var(--green);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:750;cursor:pointer}
+    .btn-light{background:#f3f5f3;color:var(--dark)}.btn-red{background:var(--red)}
+    .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:13px;margin:20px 0}
+    .card{padding:18px}.label{font-size:13px;color:var(--muted);min-height:31px}
+    .number{font-size:30px;font-weight:850;margin-top:7px}.red{color:var(--red)}.green{color:var(--ok)}.gold{color:#9a6900}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel{padding:18px}.wide{grid-column:1/-1}
+    h2{font-size:20px;margin:0 0 15px}.tabs{display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap}
+    .tab-btn{background:#f0f2ef;color:#526057}.tab-btn.active{background:var(--green);color:#fff}
+    .tab-content{display:none}.tab-content.active{display:block}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}
+    table{width:100%;border-collapse:collapse;min-width:780px}
+    th,td{padding:12px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+    th{background:#f7f7f3;font-size:12px;text-transform:uppercase;color:#66716b}
+    tr:last-child td{border-bottom:0}a{color:var(--green);font-weight:750;text-decoration:none}
+    .badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}
+    .badge-open{background:var(--red-bg);color:var(--red)}.badge-closed{background:var(--ok-bg);color:var(--ok)}
+    .empty{text-align:center;color:var(--muted);padding:28px}.close-form{display:flex;gap:7px;min-width:280px}
+    .close-form input{min-width:180px}.flash{background:var(--ok-bg);color:var(--ok);padding:12px 14px;border-radius:12px;margin:16px 0}
+    canvas{max-height:340px}
+    @media(max-width:1050px){.cards{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:780px){main{padding:14px}.toolbar{margin-top:-25px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.cards{grid-template-columns:1fr 1fr}.panel{padding:14px}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <div><h1>📦 Материальный бухгалтер</h1><div class="lead">Открытые и закрытые минусовые позиции</div></div>
+    <a class="logout" href="/logout">Выйти</a>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <strong>Период анализа</strong>
+    <form><input type="month" name="month" value="{{ month }}"><button>Показать</button></form>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}<div class="flash">{{message}}</div>{% endfor %}
+  {% endwith %}
+
+  <section class="cards">
+    <div class="card"><div class="label">Всего случаев</div><div class="number">{{totals.positions or 0}}</div></div>
+    <div class="card"><div class="label">Открытых позиций</div><div class="number red">{{totals.open_count or 0}}</div></div>
+    <div class="card"><div class="label">Открытый минус</div><div class="number red">{{totals.open_quantity or 0}}</div></div>
+    <div class="card"><div class="label">Закрытых позиций</div><div class="number green">{{totals.closed_count or 0}}</div></div>
+    <div class="card"><div class="label">Закрыто единиц</div><div class="number green">{{totals.closed_quantity or 0}}</div></div>
+    <div class="card"><div class="label">Причина не найдена</div><div class="number gold">{{totals.unresolved or 0}}</div></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel wide"><h2>📈 Динамика работы</h2><canvas id="dynamicsChart"></canvas></div>
+    <div class="panel"><h2>🔥 Товары с минусами — только открытые</h2><canvas id="productChart"></canvas></div>
+    <div class="panel"><h2>⚠️ Причины ошибок</h2><canvas id="reasonChart"></canvas></div>
+
+    <div class="panel wide">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('open',this)">🔴 Открытые позиции ({{open_positions|length}})</button>
+        <button class="tab-btn" onclick="showTab('closed',this)">🟢 Закрытые позиции ({{closed_positions|length}})</button>
+      </div>
+
+      <div id="tab-open" class="tab-content active">
+        <div class="table-wrap"><table>
+          <tr><th>Дата</th><th>Товар</th><th>Минус</th><th>Причина</th><th>Ответственный</th><th>Смена</th><th>Закрыть</th></tr>
+          {% for x in open_positions %}
+          <tr>
+            <td>{{x.check_date}}</td>
+            <td><b>{{x.item_name}}</b><br><small>{{x.countermeasures|join(', ')}}</small></td>
+            <td><b>{{x.quantity}}</b></td><td>{{x.reason}}</td><td>{{x.responsible_name or '—'}}</td>
+            <td>{{x.shift}}<br><small>{{x.employee_name}}</small></td>
+            <td>
+              <form class="close-form" method="post" action="/position/{{x.id}}/close">
+                <input name="closure_comment" placeholder="Как закрыли позицию">
+                <button>Закрыть</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}<tr><td colspan="7" class="empty">Все позиции закрыты ✅</td></tr>{% endfor %}
+        </table></div>
+      </div>
+
+      <div id="tab-closed" class="tab-content">
+        <div class="table-wrap"><table>
+          <tr><th>Закрыто</th><th>Товар</th><th>Минус</th><th>Причина</th><th>Как закрыли</th><th>Смена</th><th></th></tr>
+          {% for x in closed_positions %}
+          <tr>
+            <td>{{x.closed_at}}</td><td><b>{{x.item_name}}</b></td><td>{{x.quantity}}</td>
+            <td>{{x.reason}}</td><td>{{x.closure_comment or '—'}}</td>
+            <td>{{x.shift}}<br><small>{{x.employee_name}}</small></td>
+            <td><form method="post" action="/position/{{x.id}}/reopen"><button class="btn-light">Вернуть в открытые</button></form></td>
+          </tr>
+          {% else %}<tr><td colspan="7" class="empty">Закрытых позиций пока нет</td></tr>{% endfor %}
+        </table></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Топ открытых товаров</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Товар</th><th>Случаев</th><th>Минус</th></tr>
+        {% for x in products %}<tr><td><a href="/product?name={{x.name|urlencode}}">{{x.name}}</a></td><td>{{x.cases}}</td><td>{{x.quantity}}</td></tr>
+        {% else %}<tr><td colspan="3" class="empty">Нет открытых минусов</td></tr>{% endfor %}
+      </table></div>
+    </div>
+
+    <div class="panel">
+      <h2>Эффективность сотрудников</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Сотрудник</th><th>Проверок</th><th>Закрыто</th><th>Всего позиций</th></tr>
+        {% for x in employees %}<tr><td><b>{{x.name}}</b></td><td>{{x.checks}}</td><td class="green"><b>{{x.closed_count}}</b></td><td>{{x.positions}}</td></tr>
+        {% endfor %}
+      </table></div>
+    </div>
+
+    <div class="panel wide">
+      <h2>🛡 Какие контрмеры применялись</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Контрмера</th><th>Случаев</th><th>Единиц товара</th></tr>
+        {% for x in countermeasures %}<tr><td><b>{{x.name}}</b></td><td>{{x.cases}}</td><td>{{x.quantity}}</td></tr>
+        {% else %}<tr><td colspan="3" class="empty">Данных пока нет</td></tr>{% endfor %}
+      </table></div>
+    </div>
+  </section>
+</main>
+
+<script>
+function showTab(name,button){
+  document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  button.classList.add('active');
+}
+const productLabels={{products|map(attribute='name')|list|tojson}};
+const productValues={{products|map(attribute='quantity')|list|tojson}};
+const reasonLabels={{reasons|map(attribute='name')|list|tojson}};
+const reasonValues={{reasons|map(attribute='cases')|list|tojson}};
+const days={{dynamics|map(attribute='day')|list|tojson}};
+const opened={{dynamics|map(attribute='opened_count')|list|tojson}};
+const closed={{dynamics|map(attribute='closed_count')|list|tojson}};
+
+new Chart(document.getElementById('dynamicsChart'),{
+ type:'line',
+ data:{labels:days,datasets:[
+   {label:'Новые минусы',data:opened,tension:.3},
+   {label:'Закрытые позиции',data:closed,tension:.3}
+ ]},
+ options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}
+});
+new Chart(document.getElementById('productChart'),{
+ type:'bar',data:{labels:productLabels,datasets:[{label:'Открытый минус',data:productValues,borderRadius:7}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+});
+new Chart(document.getElementById('reasonChart'),{
+ type:'doughnut',data:{labels:reasonLabels,datasets:[{data:reasonValues}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+});
+</script>
+</body>
+</html>

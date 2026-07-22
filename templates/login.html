@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173b31">
+  <title>Вход — Материальный бухгалтер</title>
+  <style>
+    *{box-sizing:border-box}
+    :root{
+      --green:#1f5d49;
+      --green-dark:#173b31;
+      --cream:#f6f1e7;
+      --gold:#c9a35b;
+      --text:#1f2925;
+      --muted:#738079;
+      --danger:#b42318;
+    }
+    body{
+      margin:0;
+      min-height:100vh;
+      min-height:100dvh;
+      font-family:Inter,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top right,rgba(201,163,91,.28),transparent 34%),
+        linear-gradient(145deg,var(--green-dark),#244f43 46%,var(--cream) 46%);
+      display:grid;
+      place-items:center;
+      padding:22px;
+    }
+    .login-card{
+      width:min(430px,100%);
+      background:rgba(255,255,255,.97);
+      border-radius:26px;
+      padding:30px;
+      box-shadow:0 24px 70px rgba(7,28,22,.28);
+      border:1px solid rgba(255,255,255,.7);
+    }
+    .icon{
+      width:66px;height:66px;border-radius:20px;
+      display:grid;place-items:center;
+      background:linear-gradient(145deg,var(--green),#2e8064);
+      color:#fff;font-size:32px;
+      box-shadow:0 12px 30px rgba(31,93,73,.25);
+      margin-bottom:20px;
+    }
+    h1{font-size:27px;margin:0 0 8px;line-height:1.15}
+    .subtitle{color:var(--muted);line-height:1.5;margin-bottom:25px}
+    label{display:block;font-weight:700;font-size:14px;margin:15px 0 7px}
+    input{
+      width:100%;border:1px solid #dbe2de;background:#fafcfb;
+      border-radius:13px;padding:14px 15px;font-size:16px;outline:none;
+    }
+    input:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(31,93,73,.11)}
+    button{
+      width:100%;margin-top:22px;border:0;border-radius:14px;
+      padding:15px;background:linear-gradient(145deg,var(--green),#28745b);
+      color:#fff;font-size:16px;font-weight:800;cursor:pointer;
+      box-shadow:0 12px 25px rgba(31,93,73,.22);
+    }
+    .error{
+      background:#fff0ee;color:var(--danger);border:1px solid #ffd2cc;
+      border-radius:12px;padding:11px 13px;margin:12px 0;font-size:14px;
+    }
+    .safe{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin-top:18px}
+  </style>
+</head>
+<body>
+  <main class="login-card">
+    <div class="icon">📦</div>
+    <h1>Материальный бухгалтер</h1>
+    <div class="subtitle">Войдите, чтобы открыть выравнивания, минусы и аналитику.</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="error">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post" autocomplete="on">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <label for="username">Логин</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <button type="submit">Войти в систему</button>
+    </form>
+
+    <div class="safe">🔒 Доступ защищён логином и паролем</div>
+  </main>
+</body>
+</html>
